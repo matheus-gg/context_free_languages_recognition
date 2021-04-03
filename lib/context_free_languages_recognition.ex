@@ -73,7 +73,7 @@ defmodule ContextFreeLanguagesRecognition do
         filtered_productions = production_rules -- [target_production]
         final_elements = Enum.drop(String.graphemes(elem(target_production, 1)), String.length(elem(target_production, 1)) - 2)
         other_elements = String.graphemes(elem(target_production, 1)) -- final_elements
-        new_productions = Enum.reduce(other_elements, [], fn x, acc -> acc ++ [{"V#{index + Enum.find_index(other_elements, fn y -> y == x end)}", "#{other_elements}V#{index + Enum.find_index(other_elements, fn y -> y == x end)}"}] end)
+        new_productions = Enum.reduce(other_elements, [], fn x, acc -> acc ++ [{"V#{index + length(acc)}", "#{x}V#{index + length(acc)}"}] end)
         {:ok, last_elem} = Enum.fetch(new_productions, -1)
         last_index = String.to_integer(String.replace(elem(last_elem, 0), "V", ""))
         last_production = {"V#{last_index + 1}", "#{Enum.at(final_elements, 0)}#{Enum.at(final_elements, 1)}"}
