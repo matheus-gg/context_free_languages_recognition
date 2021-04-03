@@ -4,7 +4,7 @@ defmodule ContextFreeLanguagesRecognition do
   """
 
   def cfg_to_cnf(non_terminals, terminals, production_rules) do
-    cnf = remove_null_productions(production_rules)
+    remove_null_productions(production_rules)
     |> remove_unit_productions()
     |> sanitize_productions()
     |> variable_terminal_mapper(non_terminals, terminals)
@@ -59,11 +59,10 @@ defmodule ContextFreeLanguagesRecognition do
 
   def variable_terminal_mapper(production_rules, non_terminals, terminals) do
     only_terminals = Enum.filter(production_rules, fn x -> String.length(elem(x, 1)) == 1 and is_terminal(elem(x, 1)) end)
-    terminals = terminals -- only_terminals
-
+    target_productions = production_rules -- only_terminals
     new_prod_rules = Enum.reduce(terminals, [], fn x, acc -> acc ++ [{"T#{x}", x}] end)
-    replaced_prod_rules = Enum.reduce(production_rules, [], fn x, acc -> acc ++ [{elem(x, 0), String.replace(elem(x, 1), terminals, fn y -> "T#{y}" end)}] end)
-    %{:production_rules => new_prod_rules ++ replaced_prod_rules, :non_terminals => non_terminals ++ Enum.reduce(new_prod_rules, [], fn x, acc -> acc ++ [elem(x, 0)] end)}
+    replaced_prod_rules = Enum.reduce(target_productions, [], fn x, acc -> acc ++ [{elem(x, 0), String.replace(elem(x, 1), terminals, fn y -> "T#{y}" end)}] end)
+    %{:production_rules => new_prod_rules ++ replaced_prod_rules ++ only_terminals, :non_terminals => non_terminals ++ Enum.reduce(new_prod_rules, [], fn x, acc -> acc ++ [elem(x, 0)] end)}
   end
 
   def variable_non_terminal_mapper(%{:production_rules => production_rules, :non_terminals => non_terminals}, index \\ 1) do
