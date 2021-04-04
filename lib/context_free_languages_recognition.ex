@@ -119,17 +119,14 @@ defmodule ContextFreeLanguagesRecognition do
     end
   end
 
-	def recognise_chain(grammar, chain) do
+	def recognise_word(grammar, word) do
 		non_terminals = Enum.at(grammar, 0)
 		terminals = Enum.at(grammar, 1)
 		production_rules = Enum.at(grammar, 2)
-		teste = cfg_to_cnf(non_terminals, terminals, production_rules)
-		Enum.map(['a', 'b', 'c'], &CheckValues.imprimi/1)
-		IO.inspect(teste.production_rules)
-	end
-
-	def imprimi(palavra) do
-		IO.inspect(palavra)
+		grammar_in_cnf = ContextFreeLanguagesRecognition.cfg_to_cnf(non_terminals, terminals, production_rules)
+		CheckProduction.start(grammar_in_cnf.production_rules)
+		production_rules_for_this_word = CheckProduction.check_word(word)
+		Enum.member?(production_rules_for_this_word, "S")
 	end
 end
 
@@ -141,57 +138,51 @@ defmodule CheckProduction do
     Agent.start_link(fn -> %{} end, name: :words_already_checked)
   end
 
-  # def check(word) when String.length(word) == 1 do
-	# 	cached_value = Agent.get(:words_already_checked, &(Map.get(&1, word)))
-	# 	if cached_value do
-	# 		cached_value
-	# 	else
-	# 		production_rules = Agent.get(:production_rules, & &1)
-	# 		production_rule = Enum.find(production_rules, fn x -> elem(x, 1) == word end)
-	# 		Agent.update(:words_already_checked, &(Map.put(&1, word, elem(production_rule, 0))))
-	# 		elem(production_rule, 0)
-	# 	end
-  # end
-
-  def check(word) do
+  def check(word, split_at) do
 		cached_value = Agent.get(:words_already_checked, &(Map.get(&1, word)))
 		if cached_value do
       cached_value
 		else
+			production_rules = Agent.get(:production_rules, & &1)
 			cond do
 				String.length(word) == 1 ->
-					production_rules = Agent.get(:production_rules, & &1)
-					production_rule = Enum.find(production_rules, fn x -> elem(x, 1) == word end)
+					production_rule = Enum.filter(production_rules, fn x -> elem(x, 1) == word end)
 					if production_rule do
-						Agent.update(:words_already_checked, &(Map.put(&1, word, elem(production_rule, 0))))
-						elem(production_rule, 0)
+						production_rule = Enum.reduce(production_rule, [], fn x, acc -> acc ++ [elem(x, 0)] end)
+						Enum.uniq(production_rule)
+						Agent.update(:words_already_checked, &(Map.put(&1, word, production_rule)))
+						production_rule
 					else
 						[]
 					end
 				true ->
-					word_splited = String.split_at(word, 1)
+					word_splited = String.split_at(word, split_at)
 					prefix = elem(word_splited, 0)
 					suffix = elem(word_splited, 1)
-					prefix_production = check(prefix)
-					suffix_production = check(suffix)
-					nil
+					if prefix != "" and suffix != "" do
+						prefix_production = check(prefix, 1)
+						suffix_production = check(suffix, 1)
+						prefix_and_suffix_pairs = Enum.reduce(prefix_production, [], fn x, acc -> acc ++ Enum.reduce(suffix_production, [], fn y, acc2 -> acc2 ++ ["#{x}#{y}"] end ) end)
+						production_rule = Enum.reduce(prefix_and_suffix_pairs, [], fn pair , acc -> acc ++ Enum.filter(production_rules, fn production_rule -> elem(production_rule, 1) == pair end) end)
+						if production_rule do
+							production_rule = Enum.reduce(production_rule, [], fn x, acc -> acc ++ [elem(x, 0)] end)
+							production_rule = production_rule ++ check(word, split_at + 1)
+							production_rule = Enum.uniq(production_rule)
+							Agent.update(:words_already_checked, &(Map.put(&1, word, production_rule)))
+							production_rule
+						else
+							[]
+						end
+					else
+						[]
+					end
 			end
 		end
 
   end
 
-	def teste do
-		teste = CheckProduction.check("b")
-		IO.inspect(teste)
-		IO.inspect(Agent.get(:words_already_checked, & &1))
+	def check_word(word) do
+		CheckProduction.check(word, 1)
 	end
 
 end
-
-# {:ok, _} = Fib.start
-# IO.puts Fib.fib(1000)
-#
-# grammar = [["S", "A", "B"], ["a", "b"], [{"S", "ASA"}, {"S", "aB"}, {"S", "b"}, {"A", "B"}, {"B", "b"}, {"B", ""}]]
-# ContextFreeLanguagesRecognition.recognise_chain(grammar, "chain")
-CheckProduction.start([{"S", "ASA"}, {"S", "aB"}, {"S", "b"}, {"A", "B"}, {"B", "b"}, {"B", ""}])
-CheckProduction.teste()
