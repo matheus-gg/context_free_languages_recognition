@@ -4,7 +4,7 @@ defmodule ContextFreeLanguagesRecognition do
   """
 
   def cfg_to_cnf(non_terminals, terminals, production_rules) do
-    cnf = remove_null_productions(production_rules)
+    remove_null_productions(production_rules)
     |> remove_unit_productions()
     |> sanitize_productions()
     |> variable_terminal_mapper(non_terminals, terminals)
@@ -59,11 +59,10 @@ defmodule ContextFreeLanguagesRecognition do
 
   def variable_terminal_mapper(production_rules, non_terminals, terminals) do
     only_terminals = Enum.filter(production_rules, fn x -> String.length(elem(x, 1)) == 1 and is_terminal(elem(x, 1)) end)
-    terminals = terminals -- only_terminals
-
+    target_productions = production_rules -- only_terminals
     new_prod_rules = Enum.reduce(terminals, [], fn x, acc -> acc ++ [{"T#{x}", x}] end)
-    replaced_prod_rules = Enum.reduce(production_rules, [], fn x, acc -> acc ++ [{elem(x, 0), String.replace(elem(x, 1), terminals, fn y -> "T#{y}" end)}] end)
-    %{:production_rules => new_prod_rules ++ replaced_prod_rules, :non_terminals => non_terminals ++ Enum.reduce(new_prod_rules, [], fn x, acc -> acc ++ [elem(x, 0)] end)}
+    replaced_prod_rules = Enum.reduce(target_productions, [], fn x, acc -> acc ++ [{elem(x, 0), String.replace(elem(x, 1), terminals, fn y -> "T#{y}" end)}] end)
+    %{:production_rules => new_prod_rules ++ replaced_prod_rules ++ only_terminals, :non_terminals => non_terminals ++ Enum.reduce(new_prod_rules, [], fn x, acc -> acc ++ [elem(x, 0)] end)}
   end
 
   def variable_non_terminal_mapper(%{:production_rules => production_rules, :non_terminals => non_terminals}, index \\ 1) do
@@ -74,7 +73,7 @@ defmodule ContextFreeLanguagesRecognition do
         filtered_productions = production_rules -- [target_production]
         final_elements = Enum.drop(String.graphemes(elem(target_production, 1)), String.length(elem(target_production, 1)) - 2)
         other_elements = String.graphemes(elem(target_production, 1)) -- final_elements
-        new_productions = Enum.reduce(other_elements, [], fn x, acc -> acc ++ [{"V#{index + Enum.find_index(other_elements, fn y -> y == x end)}", "#{other_elements}V#{index + Enum.find_index(other_elements, fn y -> y == x end)}"}] end)
+        new_productions = Enum.reduce(other_elements, [], fn x, acc -> acc ++ [{"V#{index + length(acc)}", "#{x}V#{index + length(acc)}"}] end)
         {:ok, last_elem} = Enum.fetch(new_productions, -1)
         last_index = String.to_integer(String.replace(elem(last_elem, 0), "V", ""))
         last_production = {"V#{last_index + 1}", "#{Enum.at(final_elements, 0)}#{Enum.at(final_elements, 1)}"}

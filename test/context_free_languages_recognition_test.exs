@@ -21,7 +21,7 @@ defmodule ContextFreeLanguagesRecognitionTest do
           {"Tb", "b"},
           {"Tc", "c"},
           {"S", "TaTb"},
-          {"A", "Tc"}
+          {"A", "c"}
         ]
       }
   end
@@ -34,9 +34,9 @@ defmodule ContextFreeLanguagesRecognitionTest do
         {"Tb", "b"},
         {"S", "ASA"},
         {"S", "TaB"},
-        {"S", "Tb"},
-        {"B", "Tb"},
-        {"S", "Ta"},
+        {"S", "b"},
+        {"B", "b"},
+        {"S", "a"},
         {"S", "BSB"}
       ],
       non_terminals: ["S", "A", "B", "Ta", "Tb"]
@@ -48,9 +48,9 @@ defmodule ContextFreeLanguagesRecognitionTest do
           {"Ta", "a"},
           {"Tb", "b"},
           {"S", "TaB"},
-          {"S", "Tb"},
-          {"B", "Tb"},
-          {"S", "Ta"},
+          {"S", "b"},
+          {"B", "b"},
+          {"S", "a"},
           {"V1", "AV1"},
           {"V2", "SA"},
           {"V3", "BV3"},
@@ -67,9 +67,9 @@ defmodule ContextFreeLanguagesRecognitionTest do
           {"Ta", "a"},
           {"Tb", "b"},
           {"S", "TaB"},
-          {"S", "Tb"},
-          {"B", "Tb"},
-          {"S", "Ta"},
+          {"S", "b"},
+          {"B", "b"},
+          {"S", "a"},
           {"V1", "AV1"},
           {"V2", "SA"},
           {"V3", "BV3"},
