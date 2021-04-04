@@ -75,7 +75,7 @@ defmodule ContextFreeLanguagesRecognition do
       false -> acc ++ [{elem(x, 0), String.replace(elem(x, 1), terminals -- only_terminals, fn y -> "T#{y}" end)}]
       end
     end)
-    %{:production_rules => new_prod_rules ++ replaced_prod_rules ++ only_terminal_rules, :non_terminals => non_terminals ++ Enum.reduce(new_prod_rules, [], fn x, acc -> acc ++ [elem(x, 0)] end)}
+    %{:production_rules => new_prod_rules ++ replaced_prod_rules ++ only_terminal_rules ++ only_non_terminal_rules, :non_terminals => non_terminals ++ Enum.reduce(new_prod_rules, [], fn x, acc -> acc ++ [elem(x, 0)] end)}
   end
 
   def variable_non_terminal_mapper(%{:production_rules => production_rules, :non_terminals => non_terminals}, index \\ 1) do
