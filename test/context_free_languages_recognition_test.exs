@@ -61,14 +61,18 @@ defmodule ContextFreeLanguagesRecognitionTest do
   test "Context free language to Chomsky Normal Form" do
     assert ContextFreeLanguagesRecognition.cfg_to_cnf(["S", "A", "B"], ["a", "b"], [{"S", "ASA"}, {"S", "aB"}, {"S", "b"}, {"A", "B"}, {"B", "abbb"}, {"B", ""}]) ==
       %{
-        non_terminals: ["S", "A", "B", "V1", "V2"],
+        non_terminals: ["S", "A", "B", "V1", "V2", "V3", "V4"],
         production_rules: [
           {"S", "SB"},
           {"S", "b"},
           {"S", "a"},
           {"B", "SV1"},
           {"V1", "SV2"},
-          {"V2", "SS"}
+          {"V2", "SS"},
+          {"S", "AV3"},
+          {"V3", "SA"},
+          {"S", "BV4"},
+          {"V4", "SB"}
         ]
       }
   end
