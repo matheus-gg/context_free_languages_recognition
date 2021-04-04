@@ -140,9 +140,9 @@ defmodule ContextFreeLanguagesRecognition do
 
 	@doc """
 	Check the rules that produce this decomposition of word at specific position and their subsequentials.
-	# Parameters
-		- **word**: the word that want to analyze the decomposition.
-		- **split_at**: The position of word where is going to be splited.  
+	## Parameters
+    - **word**: The word that want to analyze the decomposition.
+    - **split_at**: The position of word where is going to be splited.  
 	"""
 	def check_decomposition(word, split_at) do
 		# First I check if this word already exists in cache, if already exist return the cached value else process the word
@@ -194,8 +194,8 @@ defmodule ContextFreeLanguagesRecognition do
 	
 	@doc """
 	I got a top-bottom aproach so I get the whole word first and try to find the subtring production rules
-	# Parameters
-		- **word**: the word that want to analyze with the production rule.
+	## Parameters
+    - **word**: The word that want to analyze with the production rule.
 	"""
 	def check_word(word) do
 		check_decomposition(word, 1)
@@ -203,9 +203,9 @@ defmodule ContextFreeLanguagesRecognition do
 	
 	@doc """
 	Recognise the word with a context free language.
-	# Parameters
-		- **grammar**: Grammar in context free langage.
-		- **word**: the word that want to analyze with the grammar.
+	## Parameters
+    - **grammar**: Grammar in context free langage.
+    - **word**: The word that want to analyze with the grammar.
 	"""
 	def recognise_word(grammar, word) do
 		non_terminals = Enum.at(grammar, 0)

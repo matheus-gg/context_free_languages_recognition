@@ -25,3 +25,5 @@ context_free_languages_recognition-*.tar
 
 # Temporary files for e.g. tests
 /tmp
+
+mix.lock
