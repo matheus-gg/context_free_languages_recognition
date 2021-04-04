@@ -1,4 +1,5 @@
 defmodule ContextFreeLanguagesRecognition do
+	use Agent
   @moduledoc """
   This module implements strings recognition for context free languages. Is divided in two parts:
   * A set of funcions to make the transformation of the input context free grammar into an equivalent Chomsky Normal Form grammar.
@@ -17,11 +18,14 @@ defmodule ContextFreeLanguagesRecognition do
   terminals bigger than or equal 3 are constructed with the `Vn` non terminal, iex. `B -> ABC` generates `B -> AV1, V1 -> BC`.
 
   The CYK algorithm is a parsing algorithm for context free grammars, used to determine if a string is accepted by the grammar. The input grammar must
-  be in the Chomsky Normal Form. The algorithm is based in dynamic programming, and it's worst case running time is `O(n^3*|G|)`.
+  be in the Chomsky Normal Form. The algorithm is based in dynamic programming, and it's worst case running time is `O(n^3*|G|)`. Basically the CYK split the word
+  into two parts the prefix and suffix and check the production rules of them and join to see if there is a formation that can generate the joined non terminal final element
+  if there is then add to a list of possible formation rule when splited there.And after that he continues to split the word in ever possible position and do this.
+  After all splits then he join all solution found and check if the start symbol is there. if it is then that word can be generated with this production rules.
   """
-	use Agent
+
 	@doc """
-	this function start the Agent and initialize with two list one containg the profuction rules, and the another containing words already checked.
+	This function start the Agent and initialize with two list one containg the profuction rules, and the another containing words already checked.
 	## Parameters
     - **production_rules**: the production rules in chomsky Normal Form.
 	"""
