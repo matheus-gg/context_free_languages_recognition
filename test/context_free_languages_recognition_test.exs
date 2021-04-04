@@ -43,7 +43,7 @@ defmodule ContextFreeLanguagesRecognitionTest do
       }
     ) ==
       %{
-        non_terminals: ["S", "A", "B", "Ta", "Tb", "V1", "V2", "V3", "V4"],
+        non_terminals: ["S", "A", "B", "Ta", "Tb", "V1", "V2"],
         production_rules: [
           {"Ta", "a"},
           {"Tb", "b"},
@@ -51,10 +51,10 @@ defmodule ContextFreeLanguagesRecognitionTest do
           {"S", "b"},
           {"B", "b"},
           {"S", "a"},
-          {"V1", "AV1"},
-          {"V2", "SA"},
-          {"V3", "BV3"},
-          {"V4", "SB"}
+          {"S", "AV1"},
+          {"V1", "SA"},
+          {"S", "BV2"},
+          {"V2", "SB"}
         ]
       }
   end
@@ -62,7 +62,7 @@ defmodule ContextFreeLanguagesRecognitionTest do
   test "Context free language to Chomsky Normal Form" do
     assert ContextFreeLanguagesRecognition.cfg_to_cnf(["S", "A", "B"], ["a", "b"], [{"S", "ASA"}, {"S", "aB"}, {"S", "b"}, {"A", "B"}, {"B", "b"}, {"B", ""}]) ==
       %{
-        non_terminals: ["S", "A", "B", "Ta", "Tb", "V1", "V2", "V3", "V4"],
+        non_terminals: ["S", "A", "B", "Ta", "Tb", "V1", "V2"],
         production_rules: [
           {"Ta", "a"},
           {"Tb", "b"},
@@ -70,10 +70,10 @@ defmodule ContextFreeLanguagesRecognitionTest do
           {"S", "b"},
           {"B", "b"},
           {"S", "a"},
-          {"V1", "AV1"},
-          {"V2", "SA"},
-          {"V3", "BV3"},
-          {"V4", "SB"}
+          {"S", "AV1"},
+          {"V1", "SA"},
+          {"S", "BV2"},
+          {"V2", "SB"}
         ]
       }
   end
