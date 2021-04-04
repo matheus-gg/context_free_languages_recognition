@@ -198,7 +198,7 @@ defmodule ContextFreeLanguagesRecognition do
 		- **word**: the word that want to analyze with the production rule.
 	"""
 	def check_word(word) do
-		ContextFreeLanguagesRecognition.check_decomposition(word, 1)
+		check_decomposition(word, 1)
 	end
 	
 	@doc """
@@ -212,9 +212,9 @@ defmodule ContextFreeLanguagesRecognition do
 		terminals = Enum.at(grammar, 1)
 		production_rules = Enum.at(grammar, 2)
 		# convert the grammar to Chomsky Normal Form
-		grammar_in_cnf = ContextFreeLanguagesRecognition.cfg_to_cnf(non_terminals, terminals, production_rules)
-		ContextFreeLanguagesRecognition.start(grammar_in_cnf.production_rules)
-		production_rules_for_this_word = ContextFreeLanguagesRecognition.check_word(word)
+		grammar_in_cnf = cfg_to_cnf(non_terminals, terminals, production_rules)
+		start(grammar_in_cnf.production_rules)
+		production_rules_for_this_word = check_word(word)
 		Enum.member?(production_rules_for_this_word, "S")
 	end
 end
