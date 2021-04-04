@@ -68,20 +68,57 @@ defmodule ContextFreeLanguagesRecognition do
   def variable_non_terminal_mapper(%{:production_rules => production_rules, :non_terminals => non_terminals}, index \\ 1) do
     target_production = Enum.find(production_rules, fn x -> String.length(elem(x, 1)) >= 3 and Enum.all?(String.graphemes(elem(x, 1)), fn y -> is_non_terminal(y) and (not is_str_integer(y)) end)  end)
     case (target_production == nil) do
-      true -> %{:production_rules => production_rules, :non_terminals => non_terminals}
+      true ->
+        t_productions = Enum.filter(production_rules, fn x -> String.contains?(elem(x, 1), "T") end)
+        target_t_production = Enum.find(t_productions, fn x -> String.length(elem(x, 1)) - Enum.count(String.graphemes(elem(x, 1)), fn y -> y == "T" end) - Enum.count(String.graphemes(elem(x, 1)), fn y -> y == "V" end) - Enum.count(String.graphemes(elem(x, 1)), fn y -> is_str_integer(y) end) >= 3 end)
+        case (target_t_production == nil) do
+          true -> %{:production_rules => production_rules, :non_terminals => Enum.uniq(non_terminals)}
+          false ->
+            filtered_t_productions = production_rules -- [target_t_production]
+            chunked_production = Enum.reduce(String.graphemes(elem(target_t_production, 1)), [], fn x, acc -> case (is_non_terminal(x)) do
+              true -> acc ++ [x]
+              false ->
+                last_element = Enum.at(acc, -1)
+                acc ++ ["#{last_element}#{x}"]
+              end
+            end)
+            clean_chunked_prod = Enum.reject(chunked_production, fn x -> x == "T" end)
+            final_elem = Enum.drop(clean_chunked_prod, Enum.count(clean_chunked_prod) -2)
+            other_elem = clean_chunked_prod -- final_elem
+            new_prods = Enum.reduce(other_elem, [], fn x, acc -> case Enum.empty?(acc) do
+              true -> acc ++ [{elem(target_t_production, 0), "#{x}V#{index + length(acc)}"}]
+              false -> acc ++ [{"V#{index + length(acc) - 1}", "#{x}V#{index + length(acc)}"}]
+              end
+            end)
+            {:ok, last_element} = Enum.fetch(new_prods, -1)
+            last_idx = case String.contains?(elem(last_element, 0), "V") do
+              true -> String.to_integer(String.replace(elem(last_element, 0), "V", ""))
+              false -> index - 1
+            end
+            last_prod = {"V#{last_idx + 1}", "#{Enum.at(final_elem, 0)}#{Enum.at(final_elem, 1)}"}
+            new_non_term = Enum.reduce(new_prods, [], fn x, acc -> acc ++ [elem(x, 0)] end)
+            variable_non_terminal_mapper(%{:production_rules => filtered_t_productions ++ new_prods ++ [last_prod], :non_terminals => non_terminals ++ new_non_term ++ ["V#{last_idx + 1}"]}, last_idx + 2)
+        end
       false ->
         filtered_productions = production_rules -- [target_production]
         final_elements = Enum.drop(String.graphemes(elem(target_production, 1)), String.length(elem(target_production, 1)) - 2)
         other_elements = String.graphemes(elem(target_production, 1)) -- final_elements
-        new_productions = Enum.reduce(other_elements, [], fn x, acc -> acc ++ [{"V#{index + length(acc)}", "#{x}V#{index + length(acc)}"}] end)
+        new_productions = Enum.reduce(other_elements, [], fn x, acc -> case Enum.empty?(acc) do
+          true -> acc ++ [{elem(target_production, 0),"#{x}V#{index + length(acc)}"}]
+          false -> acc ++ [{"V#{index + length(acc) - 1}", "#{x}V#{index + length(acc)}"}]
+          end
+        end)
         {:ok, last_elem} = Enum.fetch(new_productions, -1)
-        last_index = String.to_integer(String.replace(elem(last_elem, 0), "V", ""))
+        last_index = case String.contains?(elem(last_elem, 0), "V") do
+          true -> String.to_integer(String.replace(elem(last_elem, 0), "V", ""))
+          false -> index - 1
+        end
         last_production = {"V#{last_index + 1}", "#{Enum.at(final_elements, 0)}#{Enum.at(final_elements, 1)}"}
         new_non_terminals = Enum.reduce(new_productions, [], fn x, acc -> acc ++ [elem(x, 0)] end)
         variable_non_terminal_mapper(%{:production_rules => filtered_productions ++ new_productions ++ [last_production], :non_terminals => non_terminals ++ new_non_terminals ++ ["V#{last_index + 1}"]}, last_index + 2)
     end
   end
-	
+
 	def recognise_chain(grammar, chain) do
 		non_terminals = Enum.at(grammar, 0)
 		terminals = Enum.at(grammar, 1)
@@ -103,7 +140,7 @@ defmodule CheckProduction do
 		Agent.start_link(fn -> production_rules end, name: :production_rules)
     Agent.start_link(fn -> %{} end, name: :words_already_checked)
   end
-	
+
   # def check(word) when String.length(word) == 1 do
 	# 	cached_value = Agent.get(:words_already_checked, &(Map.get(&1, word)))
 	# 	if cached_value do
@@ -115,13 +152,13 @@ defmodule CheckProduction do
 	# 		elem(production_rule, 0)
 	# 	end
   # end
-	
+
   def check(word) do
 		cached_value = Agent.get(:words_already_checked, &(Map.get(&1, word)))
 		if cached_value do
       cached_value
 		else
-			cond do 
+			cond do
 				String.length(word) == 1 ->
 					production_rules = Agent.get(:production_rules, & &1)
 					production_rule = Enum.find(production_rules, fn x -> elem(x, 1) == word end)
@@ -131,7 +168,7 @@ defmodule CheckProduction do
 					else
 						[]
 					end
-				true ->	
+				true ->
 					word_splited = String.split_at(word, 1)
 					prefix = elem(word_splited, 0)
 					suffix = elem(word_splited, 1)
@@ -140,20 +177,20 @@ defmodule CheckProduction do
 					nil
 			end
 		end
-		
+
   end
-	
+
 	def teste do
 		teste = CheckProduction.check("b")
 		IO.inspect(teste)
 		IO.inspect(Agent.get(:words_already_checked, & &1))
 	end
-	
+
 end
 
 # {:ok, _} = Fib.start
 # IO.puts Fib.fib(1000)
-# 
+#
 # grammar = [["S", "A", "B"], ["a", "b"], [{"S", "ASA"}, {"S", "aB"}, {"S", "b"}, {"A", "B"}, {"B", "b"}, {"B", ""}]]
 # ContextFreeLanguagesRecognition.recognise_chain(grammar, "chain")
 CheckProduction.start([{"S", "ASA"}, {"S", "aB"}, {"S", "b"}, {"A", "B"}, {"B", "b"}, {"B", ""}])
