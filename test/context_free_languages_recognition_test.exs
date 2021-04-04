@@ -26,7 +26,7 @@ defmodule ContextFreeLanguagesRecognitionTest do
   end
 
   test "Substitute non terminal productions greater than 2" do
-    ContextFreeLanguagesRecognition.variable_non_terminal_mapper(
+    assert ContextFreeLanguagesRecognition.variable_non_terminal_mapper(
       %{
       production_rules: [
         {"Ta", "a"},
