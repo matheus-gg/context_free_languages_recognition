@@ -1,6 +1,23 @@
 defmodule ContextFreeLanguagesRecognition do
   @moduledoc """
-  Documentation for `ContextFreeLanguagesRecognition`.
+  This module implements strings recognition for context free languages. Is divided in two parts:
+  * A set of funcions to make the transformation of the input context free grammar into an equivalent Chomsky Normal Form grammar.
+  * Another set of functions to implement the CYK algorithm to determine if the input string is accepted by the converted Chomsky Normal Form grammar.
+
+  A grammar is said to be in Chomsky Normal Form if all of its production rules are of the form: `A -> BC` or `A -> a`. The transformation of the input grammar
+  into an equivalent Chomsky Normal Form grammar is based on a central function. It receives the non terminals, terminals and production rules and applies
+  a set of changes in order to accomplish the transformation. The changes consist of removing null productions,removing unit productions, sanitizing
+  productions (remove duplicates and dumb productions), changing right hand side terminals adding a new production for them (when applicable) and
+  changing right hand side non terminal productions with length larger or equal 3. After all these changes, the new grammar is a Chomsky normal form grammar
+  equivalent to the input grammar.
+
+  Some conventions were applied to make the validation and transformation process easier. The start symbol will always be `S`. The valid terminals are
+  all the lower case letters of the latin alphabet. The valid non terminals are all the upper case letters of the latin alphabet, except the `T` and `V`.
+  The new production rules made for the righ hand side terminals are constructed as `Tx -> x`. The new production rules made for the right hand side non
+  terminals bigger than or equal 3 are constructed with the `Vn` non terminal, iex. `B -> ABC` generates `B -> AV1, V1 -> BC`.
+
+  The CYK algorithm is a parsing algorithm for context free grammars, used to determine if a string is accepted by the grammar. The input grammar must
+  be in the Chomsky Normal Form. The algorithm is based in dynamic programming, and it's worst case running time is `O(n^3*|G|)`.
   """
 	use Agent
 
@@ -9,6 +26,15 @@ defmodule ContextFreeLanguagesRecognition do
     Agent.start_link(fn -> %{} end, name: :words_already_checked)
   end
 
+  @doc """
+  Central function to perform the Chomsky Normal Form transformation. Receives the input grammar parameters and uses the pipeline operator to sequentially
+  call the transformation functions with the input parameters. Returns the new grammar, equivalent to the one from the input, but in CNF.
+
+  ## Parameters
+    - **non_terminals**: The list of non terminals of the input grammar.
+    - **terminals**: The list of terminals of the input grammar.
+    - **production_rules**: A list of tuples representing the production rules. The form o the tuples is `{"S", "aB"}`, where the first argument is the left hand side of the production rule, and the second argument the right hand side of the production rule.
+  """
   def cfg_to_cnf(non_terminals, terminals, production_rules) do
     remove_null_productions(production_rules)
     |> remove_unit_productions()
@@ -17,14 +43,32 @@ defmodule ContextFreeLanguagesRecognition do
     |> variable_non_terminal_mapper()
   end
 
+  @doc """
+  Determines if a char is a terminal. Returns true if is a terminal, and false otherwise.
+
+  ## Parameters
+    - **char**: The char to be evaluated.
+  """
   def is_terminal(char) do
     String.downcase(char) == char
   end
 
+  @doc """
+  Determines if a char is a non terminal. Returns true if is a non terminal, and false otherwise.
+
+  ## Parameters
+    - **char**: The char to be evaluated.
+  """
   def is_non_terminal(char) do
     String.upcase(char) == char
   end
 
+  @doc """
+  Determines if a char is string representation of a integer. Returns true if is an integer, and false otherwise.
+
+  ## Parameters
+    - **char**: The char to be evaluated.
+  """
   def is_str_integer(char) do
     case Integer.parse(char) do
       {_, ""} -> true
@@ -32,6 +76,12 @@ defmodule ContextFreeLanguagesRecognition do
     end
   end
 
+  @doc """
+  Removes the null productions from the production rules recursivelly. The null productions are represented by `{"N", ""}`. Returns the new production rules.
+
+  ## Parameters
+    - **production_rules**: A list of tuples representing the production rules. The form o the tuples is `{"S", "aB"}`, where the first argument is the left hand side of the production rule, and the second argument the right hand side of the production rule..
+  """
   def remove_null_productions(production_rules) do
     null_productions = Enum.filter(production_rules, fn x -> elem(x, 1) == "" end)
     case (Enum.empty?(null_productions)) do
@@ -45,6 +95,12 @@ defmodule ContextFreeLanguagesRecognition do
     end
   end
 
+  @doc """
+  Removes the unit productions from the production rules recursivelly. The unit productions are represented by `{"N", "N"}`. Returns the new production rules.
+
+  ## Parameters
+    - **production_rules**: A list of tuples representing the production rules. The form o the tuples is `{"S", "aB"}`, where the first argument is the left hand side of the production rule, and the second argument the right hand side of the production rule..
+  """
   def remove_unit_productions(production_rules) do
     unit_production = Enum.find(production_rules, fn x -> String.length(elem(x, 1)) == 1 and is_non_terminal(elem(x, 1)) end)
     case (unit_production == nil) do
@@ -58,11 +114,27 @@ defmodule ContextFreeLanguagesRecognition do
     end
   end
 
+  @doc """
+  Sanitizes the production rules, removing duplicated rules and rules of the form `A -> A`. Returns the new production rules.
+
+  ## Parameters
+    - **production_rules**: A list of tuples representing the production rules. The form o the tuples is `{"S", "aB"}`, where the first argument is the left hand side of the production rule, and the second argument the right hand side of the production rule..
+  """
   def sanitize_productions(production_rules) do
     remove_dumb_transitions = Enum.filter(production_rules, fn x -> elem(x, 0) != elem(x, 1) end)
     Enum.uniq(remove_dumb_transitions)
   end
 
+  @doc """
+  Changes the productions with terminals on the right hand side. If there is a rule mapping a non terminal to a terminal, no additional rules are generated.
+  Otherwise, a new rule is produced for each non terminal found on the right hand side, on the form `{"Tx", "x"}`, and the rhs terminals are then substituted for the equivalent new generated terminal.
+  The return of this function is a map with the new production rules and the new non terminals.
+
+  ## Parameters
+    - **production_rules**: A list of tuples representing the production rules. The form o the tuples is `{"S", "aB"}`, where the first argument is the left hand side of the production rule, and the second argument the right hand side of the production rule.
+    - **non_terminals**: The list of non terminals of the input grammar.
+    - **terminals**: The list of terminals of the input grammar.
+  """
   def variable_terminal_mapper(production_rules, non_terminals, terminals) do
     only_terminal_rules = Enum.filter(production_rules, fn x -> String.length(elem(x, 1)) == 1 and is_terminal(elem(x, 1)) end)
     only_terminal_map = Enum.reduce(only_terminal_rules, Map.new(), fn x, acc -> Map.put(acc, elem(x, 1), elem(x, 0)) end)
@@ -84,6 +156,15 @@ defmodule ContextFreeLanguagesRecognition do
     %{:production_rules => new_prod_rules ++ replaced_prod_rules ++ only_terminal_rules ++ only_non_terminal_rules, :non_terminals => non_terminals ++ Enum.reduce(new_prod_rules, [], fn x, acc -> acc ++ [elem(x, 0)] end)}
   end
 
+  @doc """
+  Changes the productions with non terminals on the right hand side and length greater or equal 3. If there is a rule mapping a non terminal to three or more non terminals, this rule is broken into two or more new rules.
+  The new rules are generated with the non terminal `V` followed by an index. Iex: `{"S", "ABCD"}` is broken into `[{"S", "AV1"}, {"V1", "BV2"}, {"V2", "CD"}}]`.
+  The return of this function is a map with the new production rules and the new non terminals.
+
+  ## Parameters
+    - **%{:production_rules => production_rules, :non_terminals => non_terminals}**: A map with the production_rules and non_terminals to be changed.
+    - **index**: The index used to generate the new non terminals `Vn`. Starts with 1 and is incremented for each `Vn` generated.
+  """
   def variable_non_terminal_mapper(%{:production_rules => production_rules, :non_terminals => non_terminals}, index \\ 1) do
     target_production = Enum.find(production_rules, fn x -> String.length(elem(x, 1)) >= 3 and Enum.all?(String.graphemes(elem(x, 1)), fn y -> is_non_terminal(y) and (not is_str_integer(y)) end)  end)
     case (target_production == nil) do
@@ -142,7 +223,7 @@ defmodule ContextFreeLanguagesRecognition do
 	Check the rules that produce this decomposition of word at specific position and their subsequentials.
 	## Parameters
     - **word**: The word that want to analyze the decomposition.
-    - **split_at**: The position of word where is going to be splited.  
+    - **split_at**: The position of word where is going to be splited.
 	"""
 	def check_decomposition(word, split_at) do
 		# First I check if this word already exists in cache, if already exist return the cached value else process the word
@@ -160,20 +241,20 @@ defmodule ContextFreeLanguagesRecognition do
 					Agent.update(:words_already_checked, &(Map.put(&1, word, production_rule)))
 					production_rule
 				true ->
-					# if the length of word is higher than 1 then the word is splited in 2 parts, the first one is the prefix and the other is suffix, 
+					# if the length of word is higher than 1 then the word is splited in 2 parts, the first one is the prefix and the other is suffix,
 					word_splited = String.split_at(word, split_at)
 					prefix = elem(word_splited, 0)
 					suffix = elem(word_splited, 1)
 					if prefix != "" and suffix != "" do
 						prefix_production = check_decomposition(prefix, 1)
 						suffix_production = check_decomposition(suffix, 1)
-						# I check the production rules of both and then I join all prefix_production and suffix_production possibilities 
+						# I check the production rules of both and then I join all prefix_production and suffix_production possibilities
 						prefix_and_suffix_pairs = Enum.reduce(prefix_production, [], fn x, acc -> acc ++ Enum.reduce(suffix_production, [], fn y, acc2 -> acc2 ++ ["#{x}#{y}"] end ) end)
-						# and then i check in the production rules all the pairs that belong to production rules 
+						# and then i check in the production rules all the pairs that belong to production rules
 						production_rule = Enum.reduce(prefix_and_suffix_pairs, [], fn pair , acc -> acc ++ Enum.filter(production_rules, fn production_rule -> elem(production_rule, 1) == pair end) end)
 						if production_rule do
 							production_rule = Enum.reduce(production_rule, [], fn x, acc -> acc ++ [elem(x, 0)] end)
-							# I check the next decomposition of the word and join with the one i got here  
+							# I check the next decomposition of the word and join with the one i got here
 							production_rule = production_rule ++ check_decomposition(word, split_at + 1)
 							production_rule = Enum.uniq(production_rule)
 							if split_at == 1 do
@@ -191,7 +272,7 @@ defmodule ContextFreeLanguagesRecognition do
 		end
 
 	end
-	
+
 	@doc """
 	I got a top-bottom aproach so I get the whole word first and try to find the subtring production rules
 	## Parameters
@@ -200,7 +281,7 @@ defmodule ContextFreeLanguagesRecognition do
 	def check_word(word) do
 		check_decomposition(word, 1)
 	end
-	
+
 	@doc """
 	Recognise the word with a context free language.
 	## Parameters
