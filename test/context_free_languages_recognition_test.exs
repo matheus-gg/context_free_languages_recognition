@@ -76,4 +76,12 @@ defmodule ContextFreeLanguagesRecognitionTest do
         ]
       }
   end
+	
+	test "Recognise a valid word in an grammar in Chomsky Normal Form" do
+		assert ContextFreeLanguagesRecognition.recognise_word([["S", "A", "B"], ["a", "b"], [{"S", "AB"}, {"A", "BB"}, {"A", "a"}, {"B", "AB"}, {"B", "b"}]], "aabbb")
+	end
+	
+	test "Recognise a invalid word from an language in Chomsky Normal Form" do
+		assert not ContextFreeLanguagesRecognition.recognise_word([["S", "A", "B"], ["a", "b"], [{"S", "AB"}, {"A", "BB"}, {"A", "a"}, {"B", "AB"}, {"B", "b"}]], "aabb")
+	end
 end

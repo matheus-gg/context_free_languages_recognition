@@ -2,6 +2,12 @@ defmodule ContextFreeLanguagesRecognition do
   @moduledoc """
   Documentation for `ContextFreeLanguagesRecognition`.
   """
+	use Agent
+
+  def start(production_rules) do
+		Agent.start_link(fn -> production_rules end, name: :production_rules)
+    Agent.start_link(fn -> %{} end, name: :words_already_checked)
+  end
 
   def cfg_to_cnf(non_terminals, terminals, production_rules) do
     remove_null_productions(production_rules)
@@ -132,56 +138,48 @@ defmodule ContextFreeLanguagesRecognition do
     end
   end
 
-	def recognise_word(grammar, word) do
-		non_terminals = Enum.at(grammar, 0)
-		terminals = Enum.at(grammar, 1)
-		production_rules = Enum.at(grammar, 2)
-		grammar_in_cnf = ContextFreeLanguagesRecognition.cfg_to_cnf(non_terminals, terminals, production_rules)
-		CheckProduction.start(grammar_in_cnf.production_rules)
-		production_rules_for_this_word = CheckProduction.check_word(word)
-		Enum.member?(production_rules_for_this_word, "S")
-	end
-end
-
-defmodule CheckProduction do
-  use Agent
-
-  def start(production_rules) do
-		Agent.start_link(fn -> production_rules end, name: :production_rules)
-    Agent.start_link(fn -> %{} end, name: :words_already_checked)
-  end
-
-  def check(word, split_at) do
+	@doc """
+	Check the rules that produce this decomposition of word at specific position and their subsequentials.
+	# Parameters
+		- **word**: the word that want to analyze the decomposition.
+		- **split_at**: The position of word where is going to be splited.  
+	"""
+	def check_decomposition(word, split_at) do
+		# First I check if this word already exists in cache, if already exist return the cached value else process the word
 		cached_value = Agent.get(:words_already_checked, &(Map.get(&1, word)))
 		if cached_value do
-      cached_value
+			cached_value
 		else
 			production_rules = Agent.get(:production_rules, & &1)
 			cond do
+				# I check if the length of word is 1 if it is just get the production rules for this word from the production rules cache the value and then return
 				String.length(word) == 1 ->
 					production_rule = Enum.filter(production_rules, fn x -> elem(x, 1) == word end)
-					if production_rule do
-						production_rule = Enum.reduce(production_rule, [], fn x, acc -> acc ++ [elem(x, 0)] end)
-						Enum.uniq(production_rule)
-						Agent.update(:words_already_checked, &(Map.put(&1, word, production_rule)))
-						production_rule
-					else
-						[]
-					end
+					production_rule = Enum.reduce(production_rule, [], fn x, acc -> acc ++ [elem(x, 0)] end)
+					Enum.uniq(production_rule)
+					Agent.update(:words_already_checked, &(Map.put(&1, word, production_rule)))
+					production_rule
 				true ->
+					# if the length of word is higher than 1 then the word is splited in 2 parts, the first one is the prefix and the other is suffix, 
 					word_splited = String.split_at(word, split_at)
 					prefix = elem(word_splited, 0)
 					suffix = elem(word_splited, 1)
 					if prefix != "" and suffix != "" do
-						prefix_production = check(prefix, 1)
-						suffix_production = check(suffix, 1)
+						prefix_production = check_decomposition(prefix, 1)
+						suffix_production = check_decomposition(suffix, 1)
+						# I check the production rules of both and then I join all prefix_production and suffix_production possibilities 
 						prefix_and_suffix_pairs = Enum.reduce(prefix_production, [], fn x, acc -> acc ++ Enum.reduce(suffix_production, [], fn y, acc2 -> acc2 ++ ["#{x}#{y}"] end ) end)
+						# and then i check in the production rules all the pairs that belong to production rules 
 						production_rule = Enum.reduce(prefix_and_suffix_pairs, [], fn pair , acc -> acc ++ Enum.filter(production_rules, fn production_rule -> elem(production_rule, 1) == pair end) end)
 						if production_rule do
 							production_rule = Enum.reduce(production_rule, [], fn x, acc -> acc ++ [elem(x, 0)] end)
-							production_rule = production_rule ++ check(word, split_at + 1)
+							# I check the next decomposition of the word and join with the one i got here  
+							production_rule = production_rule ++ check_decomposition(word, split_at + 1)
 							production_rule = Enum.uniq(production_rule)
-							Agent.update(:words_already_checked, &(Map.put(&1, word, production_rule)))
+							if split_at == 1 do
+								# when the first got back all other decomposition I save in cache
+								Agent.update(:words_already_checked, &(Map.put(&1, word, production_rule)))
+							end
 							production_rule
 						else
 							[]
@@ -192,10 +190,31 @@ defmodule CheckProduction do
 			end
 		end
 
-  end
-
-	def check_word(word) do
-		CheckProduction.check(word, 1)
 	end
-
+	
+	@doc """
+	I got a top-bottom aproach so I get the whole word first and try to find the subtring production rules
+	# Parameters
+		- **word**: the word that want to analyze with the production rule.
+	"""
+	def check_word(word) do
+		ContextFreeLanguagesRecognition.check_decomposition(word, 1)
+	end
+	
+	@doc """
+	Recognise the word with a context free language.
+	# Parameters
+		- **grammar**: Grammar in context free langage.
+		- **word**: the word that want to analyze with the grammar.
+	"""
+	def recognise_word(grammar, word) do
+		non_terminals = Enum.at(grammar, 0)
+		terminals = Enum.at(grammar, 1)
+		production_rules = Enum.at(grammar, 2)
+		# convert the grammar to Chomsky Normal Form
+		grammar_in_cnf = ContextFreeLanguagesRecognition.cfg_to_cnf(non_terminals, terminals, production_rules)
+		ContextFreeLanguagesRecognition.start(grammar_in_cnf.production_rules)
+		production_rules_for_this_word = ContextFreeLanguagesRecognition.check_word(word)
+		Enum.member?(production_rules_for_this_word, "S")
+	end
 end
