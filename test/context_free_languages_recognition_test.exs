@@ -15,11 +15,10 @@ defmodule ContextFreeLanguagesRecognitionTest do
   test "Substitute single terminal productions" do
     assert ContextFreeLanguagesRecognition.variable_terminal_mapper([{"S", "ab"}, {"A", "c"}], ["S", "A"], ["a", "b", "c"]) ==
       %{
-        non_terminals: ["S", "A", "Ta", "Tb", "Tc"],
+        non_terminals: ["S", "A", "Ta", "Tb"],
         production_rules: [
           {"Ta", "a"},
           {"Tb", "b"},
-          {"Tc", "c"},
           {"S", "TaTb"},
           {"A", "c"}
         ]
@@ -60,20 +59,16 @@ defmodule ContextFreeLanguagesRecognitionTest do
   end
 
   test "Context free language to Chomsky Normal Form" do
-    assert ContextFreeLanguagesRecognition.cfg_to_cnf(["S", "A", "B"], ["a", "b"], [{"S", "ASA"}, {"S", "aB"}, {"S", "b"}, {"A", "B"}, {"B", "b"}, {"B", ""}]) ==
+    assert ContextFreeLanguagesRecognition.cfg_to_cnf(["S", "A", "B"], ["a", "b"], [{"S", "ASA"}, {"S", "aB"}, {"S", "b"}, {"A", "B"}, {"B", "abbb"}, {"B", ""}]) ==
       %{
-        non_terminals: ["S", "A", "B", "Ta", "Tb", "V1", "V2"],
+        non_terminals: ["S", "A", "B", "V1", "V2"],
         production_rules: [
-          {"Ta", "a"},
-          {"Tb", "b"},
-          {"S", "TaB"},
+          {"S", "SB"},
           {"S", "b"},
-          {"B", "b"},
           {"S", "a"},
-          {"S", "AV1"},
-          {"V1", "SA"},
-          {"S", "BV2"},
-          {"V2", "SB"}
+          {"B", "SV1"},
+          {"V1", "SV2"},
+          {"V2", "SS"}
         ]
       }
   end

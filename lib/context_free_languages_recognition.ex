@@ -58,11 +58,24 @@ defmodule ContextFreeLanguagesRecognition do
   end
 
   def variable_terminal_mapper(production_rules, non_terminals, terminals) do
-    only_terminals = Enum.filter(production_rules, fn x -> String.length(elem(x, 1)) == 1 and is_terminal(elem(x, 1)) end)
-    target_productions = production_rules -- only_terminals
-    new_prod_rules = Enum.reduce(terminals, [], fn x, acc -> acc ++ [{"T#{x}", x}] end)
-    replaced_prod_rules = Enum.reduce(target_productions, [], fn x, acc -> acc ++ [{elem(x, 0), String.replace(elem(x, 1), terminals, fn y -> "T#{y}" end)}] end)
-    %{:production_rules => new_prod_rules ++ replaced_prod_rules ++ only_terminals, :non_terminals => non_terminals ++ Enum.reduce(new_prod_rules, [], fn x, acc -> acc ++ [elem(x, 0)] end)}
+    only_terminal_rules = Enum.filter(production_rules, fn x -> String.length(elem(x, 1)) == 1 and is_terminal(elem(x, 1)) end)
+    only_terminal_map = Enum.reduce(only_terminal_rules, Map.new(), fn x, acc -> Map.put(acc, elem(x, 1), elem(x, 0)) end)
+    only_non_terminal_rules = Enum.filter(production_rules, fn x -> Enum.all?(String.graphemes(elem(x, 1)), fn y -> is_non_terminal(y) end) end)
+    filter_terminal_prod = production_rules -- only_terminal_rules
+    target_productions =  filter_terminal_prod -- only_non_terminal_rules
+    only_terminals = Enum.reduce(only_terminal_rules, [], fn x, acc -> acc ++ [elem(x, 1)] end)
+    new_prod_rules = Enum.reduce(terminals -- only_terminals, [], fn x, acc -> acc ++ [{"T#{x}", x}] end)
+    replaced_prod_rules = Enum.reduce(target_productions, [], fn x, acc -> case String.contains?(elem(x, 1), only_terminals) do
+      true ->
+        replace_only_terminals = String.replace(elem(x, 1), only_terminals, fn y -> only_terminal_map[y] end)
+        case String.contains?(replace_only_terminals, terminals -- only_terminals) do
+          true -> acc ++ [{elem(x, 0), String.replace(replace_only_terminals, terminals -- only_terminals, fn y -> "T#{y}" end)}]
+          false -> acc ++ [{elem(x, 0), replace_only_terminals}]
+        end
+      false -> acc ++ [{elem(x, 0), String.replace(elem(x, 1), terminals -- only_terminals, fn y -> "T#{y}" end)}]
+      end
+    end)
+    %{:production_rules => new_prod_rules ++ replaced_prod_rules ++ only_terminal_rules, :non_terminals => non_terminals ++ Enum.reduce(new_prod_rules, [], fn x, acc -> acc ++ [elem(x, 0)] end)}
   end
 
   def variable_non_terminal_mapper(%{:production_rules => production_rules, :non_terminals => non_terminals}, index \\ 1) do
