@@ -3,7 +3,11 @@ defmodule ContextFreeLanguagesRecognition do
   Documentation for `ContextFreeLanguagesRecognition`.
   """
 	use Agent
-
+	@doc """
+	this function start the Agent and initialize with two list one containg the profuction rules, and the another containing words already checked.
+	## Parameters
+    - **production_rules**: the production rules in chomsky Normal Form.
+	"""
   def start(production_rules) do
 		Agent.start_link(fn -> production_rules end, name: :production_rules)
     Agent.start_link(fn -> %{} end, name: :words_already_checked)
@@ -193,7 +197,14 @@ defmodule ContextFreeLanguagesRecognition do
 	end
 	
 	@doc """
-	I got a top-bottom aproach so I get the whole word first and try to find the subtring production rules
+	I got a top-bottom aproach so I get the whole word first and try to find the subtring production rules.
+	(if image is too small click to view image in another tab)
+	This image represent the function calling the top one first.
+	Represented as "1) a|abb": 
+    - The "1)" represent the order of calling the function but not necessary the returning order because in this case the 1) is the last to return.
+    - The "|" represent where I'm spliting the word
+
+	![](../images/check_word.png)
 	## Parameters
     - **word**: The word that want to analyze with the production rule.
 	"""
